@@ -15,12 +15,14 @@ use Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract;
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Request;
 use Plenty\Plugin\ConfigRepository;
+use Plenty\Plugin\Log\Loggable;
 
 /**
  * Class ShippingController
  */
 class ShippingController extends Controller
 {
+	use Loggable;
 
 	/**
 	 * @var Request
@@ -260,6 +262,8 @@ class ShippingController extends Controller
 	private function saveLabelToS3($labelUrl, $key)
 	{
 		$output = $this->download($labelUrl);
+		$this->getLogger(__FUNCTION__)
+			->error('data: ', ['data' => $output]);
 		return $this->storageRepository->uploadObject('ShippingTutorial', $key, $output);
 
 	}
@@ -458,10 +462,12 @@ class ShippingController extends Controller
 	private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber)
 	{
 		$shipmentItems = array();
+
 		$storageObject = $this->saveLabelToS3(
 			$labelUrl,
 			$shipmentNumber . '.pdf');
-
+		$this->getLogger(__FUNCTION__)
+			->error('storage data: ', ['storage' => $storageObject]);
 		$shipmentItems[] = $this->buildShipmentItems(
 			$labelUrl,
 			$shipmentNumber);
