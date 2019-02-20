@@ -163,8 +163,8 @@ class ShippingController extends Controller
 
                     // shipping service providers API should be used here
                     $response = [
-                        'labelUrl' => 'https://developers.plentymarkets.com/layout/plugins/production/plentypluginshowcase/images/landingpage/why-plugin-2.svg',
-                        'shipmentNumber' => '1111112222223333',
+                        'labelUrl' => 'http://www.dhl.com/content/dam/downloads/g0/express/customs_regulations_china/waybill_sample.pdf',
+                        'shipmentNumber' => '911778899',
                         'sequenceNumber' => 1,
                         'status' => 'shipment sucessfully registered'
                     ];
@@ -259,25 +259,7 @@ class ShippingController extends Controller
 	 */
 	private function saveLabelToS3($labelUrl, $key)
 	{
-		$ch = curl_init();
-
-		// Set URL to download
-		curl_setopt($ch, CURLOPT_URL, $labelUrl);
-
-		// Include header in result? (0 = yes, 1 = no)
-		curl_setopt($ch, CURLOPT_HEADER, 0);
-
-		// Should cURL return or print out the data? (true = return, false = print)
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-		// Timeout in seconds
-		curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-		// Download the given URL, and return output
-		$output = curl_exec($ch);
-
-		// Close the cURL resource, and free system resources
-		curl_close($ch);
+		$output = $this->download($labelUrl);
 		return $this->storageRepository->uploadObject('ShippingTutorial', $key, $output);
 
 	}
@@ -329,7 +311,7 @@ class ShippingController extends Controller
 		foreach ($shipmentItems as $shipmentItem)
 		{
 			$transactionIds[] = $shipmentItem['shipmentNumber'];
-			
+
 		}
 
         $shipmentAt = date(\DateTime::W3C, strtotime($shipmentDate));
@@ -358,7 +340,7 @@ class ShippingController extends Controller
      */
 	private function getOpenOrderIds($orderIds)
 	{
-		
+
 		$openOrderIds = array();
 		foreach ($orderIds as $orderId)
 		{
@@ -491,4 +473,21 @@ class ShippingController extends Controller
 				$storageObject->key));
 		return $shipmentItems;
 	}
+
+	/**
+   * @param string $fileUrl
+   *
+   * @return bool|string
+   */
+  private function download(string $fileUrl) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $fileUrl);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $output = curl_exec($ch);
+    curl_close($ch);
+
+    return $output;
+  }
 }
