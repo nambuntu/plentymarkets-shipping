@@ -4,7 +4,7 @@
       "description"           : "A basic shipping plugin by plentymarkets",
       "namespace"             : "ShippingTutorial",
       "author"                : "plentymarkets GmbH",
-      "type"                  : "shipping",
+      "type"                  : "integration",
       "isClosedSource"        : "False",
       "serviceProvider"       : "ShippingTutorial\\Providers\\ShippingTutorialServiceProvider",
       "version"               : "0.1.0",
