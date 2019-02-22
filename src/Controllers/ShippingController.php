@@ -478,7 +478,7 @@ class ShippingController extends Controller {
             'arguments' => [$fileUrl]
         ]
     );
-    
+
     $this->getLogger(__METHOD__)
         ->error('download finished', ['downloaded' => json_encode($response)]);
 
