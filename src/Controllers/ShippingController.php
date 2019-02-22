@@ -501,26 +501,14 @@ class ShippingController extends Controller {
    * @return bool|string
    */
   private function download(string $fileUrl) {
-    $headers = [];
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $fileUrl);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $output = curl_exec($ch);
+    curl_close($ch);
 
-    $this->getLogger(__METHOD__)
-        ->error('call to download', ['url' => $fileUrl]);
-
-    $response = $this->library->call(
-        'ShippingTutorial::guzzle',
-        [
-            'method'    => 'get',
-            'arguments' => [
-                $fileUrl, [
-                    'headers' => $headers
-                ]
-            ]
-        ]
-    );
-
-    $this->getLogger(__METHOD__)
-        ->error('download finished', ['downloaded' => json_encode($response)]);
-
-    return self::FILE_BASE64_DATA;
+    return $output;
   }
 }
