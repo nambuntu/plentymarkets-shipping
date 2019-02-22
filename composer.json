@@ -1,0 +1,15 @@
+{
+	"name": "demo/shipping-tutorial",
+	"authors": [
+		{
+			"name": "Nam Nguyen",
+			"email": "nnguyen5@wayfair.com"
+		}
+	],
+	"require": {
+		"guzzlehttp/guzzle": "^6.3",
+		"plentymarkets/plugin-interface": "dev-beta7",
+		"ext-json": "*",
+		"php-di/phpdoc-reader": "^2.1"
+	}
+}

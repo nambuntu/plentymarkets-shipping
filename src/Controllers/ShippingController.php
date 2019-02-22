@@ -20,467 +20,441 @@ use Plenty\Plugin\Log\Loggable;
 /**
  * Class ShippingController
  */
-class ShippingController extends Controller
-{
-	use Loggable;
+class ShippingController extends Controller {
+  use Loggable;
 
-	/**
-	 * @var Request
-	 */
-	private $request;
+  /**
+   *
+   * @var Request
+   */
+  private $request;
 
-	/**
-	 * @var OrderRepositoryContract $orderRepository
-	 */
-	private $orderRepository;
+  /**
+   *
+   * @var OrderRepositoryContract $orderRepository
+   */
+  private $orderRepository;
 
-	/**
-	 * @var AddressRepositoryContract $addressRepository
-	 */
-	private $addressRepository;
+  /**
+   *
+   * @var AddressRepositoryContract $addressRepository
+   */
+  private $addressRepository;
 
-	/**
-	 * @var OrderShippingPackageRepositoryContract $orderShippingPackage
-	 */
-	private $orderShippingPackage;
+  /**
+   *
+   * @var OrderShippingPackageRepositoryContract $orderShippingPackage
+   */
+  private $orderShippingPackage;
 
-	/**
-	 * @var ShippingInformationRepositoryContract
-	 */
-	private $shippingInformationRepositoryContract;
+  /**
+   *
+   * @var ShippingInformationRepositoryContract
+   */
+  private $shippingInformationRepositoryContract;
 
-	/**
-	 * @var StorageRepositoryContract $storageRepository
-	 */
-	private $storageRepository;
+  /**
+   *
+   * @var StorageRepositoryContract $storageRepository
+   */
+  private $storageRepository;
 
-	/**
-	 * @var ShippingPackageTypeRepositoryContract
-	 */
-	private $shippingPackageTypeRepositoryContract;
+  /**
+   *
+   * @var ShippingPackageTypeRepositoryContract
+   */
+  private $shippingPackageTypeRepositoryContract;
 
-    /**
-     * @var  array
-     */
-    private $createOrderResult = [];
+  /**
+   *
+   * @var array
+   */
+  private $createOrderResult = [];
 
-    /**
-     * @var ConfigRepository
-     */
-    private $config;
+  /**
+   *
+   * @var ConfigRepository
+   */
+  private $config;
 
-	/**
-	 * ShipmentController constructor.
-     *
-	 * @param Request $request
-	 * @param OrderRepositoryContract $orderRepository
-	 * @param AddressRepositoryContract $addressRepositoryContract
-	 * @param OrderShippingPackageRepositoryContract $orderShippingPackage
-	 * @param StorageRepositoryContract $storageRepository
-	 * @param ShippingInformationRepositoryContract $shippingInformationRepositoryContract
-	 * @param ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract
-     * @param ConfigRepository $config
-     */
-	public function __construct(Request $request,
-								OrderRepositoryContract $orderRepository,
-								AddressRepositoryContract $addressRepositoryContract,
-								OrderShippingPackageRepositoryContract $orderShippingPackage,
-								StorageRepositoryContract $storageRepository,
-								ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
-								ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract,
-                                ConfigRepository $config)
-	{
-		$this->request = $request;
-		$this->orderRepository = $orderRepository;
-		$this->addressRepository = $addressRepositoryContract;
-		$this->orderShippingPackage = $orderShippingPackage;
-		$this->storageRepository = $storageRepository;
+  /**
+   * ShipmentController constructor.
+   *
+   * @param Request                                $request
+   * @param OrderRepositoryContract                $orderRepository
+   * @param AddressRepositoryContract              $addressRepositoryContract
+   * @param OrderShippingPackageRepositoryContract $orderShippingPackage
+   * @param StorageRepositoryContract              $storageRepository
+   * @param ShippingInformationRepositoryContract  $shippingInformationRepositoryContract
+   * @param ShippingPackageTypeRepositoryContract  $shippingPackageTypeRepositoryContract
+   * @param ConfigRepository                       $config
+   */
+  public function __construct(
+      Request $request, OrderRepositoryContract $orderRepository, AddressRepositoryContract $addressRepositoryContract, OrderShippingPackageRepositoryContract $orderShippingPackage,
+      StorageRepositoryContract $storageRepository, ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
+      ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract, ConfigRepository $config
+  ) {
+    $this->request              = $request;
+    $this->orderRepository      = $orderRepository;
+    $this->addressRepository    = $addressRepositoryContract;
+    $this->orderShippingPackage = $orderShippingPackage;
+    $this->storageRepository    = $storageRepository;
 
-		$this->shippingInformationRepositoryContract = $shippingInformationRepositoryContract;
-		$this->shippingPackageTypeRepositoryContract = $shippingPackageTypeRepositoryContract;
+    $this->shippingInformationRepositoryContract = $shippingInformationRepositoryContract;
+    $this->shippingPackageTypeRepositoryContract = $shippingPackageTypeRepositoryContract;
 
-		$this->config = $config;
-	}
+    $this->config = $config;
+  }
 
+  /**
+   * Registers shipment(s)
+   *
+   * @param Request $request
+   * @param array   $orderIds
+   *
+   * @return string
+   */
+  public function registerShipments(Request $request, $orderIds) {
+    $orderIds     = $this->getOrderIds($request, $orderIds);
+    $orderIds     = $this->getOpenOrderIds($orderIds);
+    $shipmentDate = date('Y-m-d');
 
-	/**
-	 * Registers shipment(s)
-	 *
-	 * @param Request $request
-	 * @param array $orderIds
-	 * @return string
-	 */
-	public function registerShipments(Request $request, $orderIds)
-	{
-		$orderIds = $this->getOrderIds($request, $orderIds);
-		$orderIds = $this->getOpenOrderIds($orderIds);
-		$shipmentDate = date('Y-m-d');
+    foreach ($orderIds as $orderId) {
+      $order = $this->orderRepository->findOrderById($orderId);
 
-		foreach($orderIds as $orderId)
-		{
-			$order = $this->orderRepository->findOrderById($orderId);
+      // gathering required data for registering the shipment
 
-            // gathering required data for registering the shipment
+      /** @var Address $address */
+      $address = $order->deliveryAddress;
 
-            /** @var Address $address */
-            $address = $order->deliveryAddress;
+      $receiverFirstName  = $address->firstName;
+      $receiverLastName   = $address->lastName;
+      $receiverStreet     = $address->street;
+      $receiverNo         = $address->houseNumber;
+      $receiverPostalCode = $address->postalCode;
+      $receiverTown       = $address->town;
+      $receiverCountry    = $address->country->name; // or: $address->country->isoCode2
 
-            $receiverFirstName     = $address->firstName;
-            $receiverLastName      = $address->lastName;
-            $receiverStreet        = $address->street;
-            $receiverNo            = $address->houseNumber;
-            $receiverPostalCode    = $address->postalCode;
-            $receiverTown          = $address->town;
-            $receiverCountry       = $address->country->name; // or: $address->country->isoCode2
+      // reads sender data from plugin config. this is going to be changed in the future to retrieve data from backend ui settings
+      $senderName       = $this->config->get('ShippingTutorial.senderName', 'plentymarkets GmbH - Timo Zenke');
+      $senderStreet     = $this->config->get('ShippingTutorial.senderStreet', 'Bürgermeister-Brunner-Str.');
+      $senderNo         = $this->config->get('ShippingTutorial.senderNo', '15');
+      $senderPostalCode = $this->config->get('ShippingTutorial.senderPostalCode', '34117');
+      $senderTown       = $this->config->get('ShippingTutorial.senderTown', 'Kassel');
+      $senderCountryID  = $this->config->get('ShippingTutorial.senderCountry', '0');
+      $senderCountry    = ($senderCountryID == 0 ? 'Germany' : 'Austria');
 
-            // reads sender data from plugin config. this is going to be changed in the future to retrieve data from backend ui settings
-            $senderName           = $this->config->get('ShippingTutorial.senderName', 'plentymarkets GmbH - Timo Zenke');
-            $senderStreet         = $this->config->get('ShippingTutorial.senderStreet', 'Bürgermeister-Brunner-Str.');
-            $senderNo             = $this->config->get('ShippingTutorial.senderNo', '15');
-            $senderPostalCode     = $this->config->get('ShippingTutorial.senderPostalCode', '34117');
-            $senderTown           = $this->config->get('ShippingTutorial.senderTown', 'Kassel');
-            $senderCountryID      = $this->config->get('ShippingTutorial.senderCountry', '0');
-            $senderCountry        = ($senderCountryID == 0 ? 'Germany' : 'Austria');
+      // gets order shipping packages from current order
+      $packages = $this->orderShippingPackage->listOrderShippingPackages($order->id);
 
-            // gets order shipping packages from current order
-            $packages = $this->orderShippingPackage->listOrderShippingPackages($order->id);
+      // iterating through packages
+      foreach ($packages as $package) {
+        // weight
+        $weight = $package->weight;
 
-            // iterating through packages
-            foreach($packages as $package)
-            {
-                // weight
-                $weight = $package->weight;
+        // determine packageType
+        $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
 
-                // determine packageType
-                $packageType = $this->shippingPackageTypeRepositoryContract->findShippingPackageTypeById($package->packageId);
+        $this->getLogger(__METHOD__)
+            ->error('package data', ['package' => $packageType, 'packageId' => $package->packageId]);
 
-                // package dimensions
-                list($length, $width, $height) = $this->getPackageDimensions($packageType);
+        // package dimensions
+        list ($length, $width, $height) = $this->getPackageDimensions($packageType);
 
+        try {
+          // check wether we are in test or productive mode, use different login or connection data
+          $mode = $this->config->get('ShippingTutorial.mode', '0');
 
-                try
-                {
-                    // check wether we are in test or productive mode, use different login or connection data
-                    $mode = $this->config->get('ShippingTutorial.mode', '0');
+          // shipping service providers API should be used here
+          $response = [
+              'labelUrl'       => 'http://www.dhl.com/content/dam/downloads/g0/express/customs_regulations_china/waybill_sample.pdf',
+              'shipmentNumber' => '911778899',
+              'sequenceNumber' => 1,
+              'status'         => 'shipment sucessfully registered'
+          ];
 
-                    // shipping service providers API should be used here
-                    $response = [
-                        'labelUrl' => 'http://www.dhl.com/content/dam/downloads/g0/express/customs_regulations_china/waybill_sample.pdf',
-                        'shipmentNumber' => '911778899',
-                        'sequenceNumber' => 1,
-                        'status' => 'shipment sucessfully registered'
-                    ];
+          // handles the response
+          $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
 
-                    // handles the response
-                    $shipmentItems = $this->handleAfterRegisterShipment($response['labelUrl'], $response['shipmentNumber'], $package->id);
+          // adds result
+          $this->createOrderResult[$orderId] = $this->buildResultArray(true, $this->getStatusMessage($response), false, $shipmentItems);
 
-                    // adds result
-                    $this->createOrderResult[$orderId] = $this->buildResultArray(
-                        true,
-                        $this->getStatusMessage($response),
-                        false,
-                        $shipmentItems);
-
-                    // saves shipping information
-                    $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
-
-
-                }
-                catch(\SoapFault $soapFault)
-                {
-                    // handle exception
-                }
-
-            }
-
-		}
-
-		// return all results to service
-		return $this->createOrderResult;
-	}
-
-
-
-    /**
-     * Cancels registered shipment(s)
-     *
-     * @param Request $request
-     * @param array $orderIds
-     * @return array
-     */
-    public function deleteShipments(Request $request, $orderIds)
-    {
-        $orderIds = $this->getOrderIds($request, $orderIds);
-        foreach ($orderIds as $orderId)
-        {
-            $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
-
-            if (isset($shippingInformation->additionalData) && is_array($shippingInformation->additionalData))
-            {
-                foreach ($shippingInformation->additionalData as $additionalData)
-                {
-                    try
-                    {
-                        $shipmentNumber = $additionalData['shipmentNumber'];
-
-                        // use the shipping service provider's API here
-                        $response = '';
-
-                        $this->createOrderResult[$orderId] = $this->buildResultArray(
-                            true,
-                            $this->getStatusMessage($response),
-                            false,
-                            null);
-
-                    }
-                    catch(\SoapFault $soapFault)
-                    {
-                        // exception handling
-                    }
-
-                }
-
-                // resets the shipping information of current order
-                $this->shippingInformationRepositoryContract->resetShippingInformation($orderId);
-            }
-
-
+          // saves shipping information
+          $this->saveShippingInformation($orderId, $shipmentDate, $shipmentItems);
+        } catch (\SoapFault $soapFault) {
+          // handle exception
         }
-
-        // return result array
-        return $this->createOrderResult;
+      }
     }
 
+    // return all results to service
+    return $this->createOrderResult;
+  }
 
-	/**
-     * Retrieves the label file from a given URL and saves it in S3 storage
-     *
-	 * @param $labelUrl
-	 * @param $key
-	 * @return StorageObject
-	 */
-	private function saveLabelToS3($labelUrl, $key)
-	{
-		$output = $this->download($labelUrl);
-		$this->getLogger(__FUNCTION__)
-			->error('data: ', ['data' => $output]);
-		return $this->storageRepository->uploadObject('ShippingTutorial', $key, $output);
+  /**
+   * Cancels registered shipment(s)
+   *
+   * @param Request $request
+   * @param array   $orderIds
+   *
+   * @return array
+   */
+  public function deleteShipments(Request $request, $orderIds) {
+    $orderIds = $this->getOrderIds($request, $orderIds);
+    foreach ($orderIds as $orderId) {
+      $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
 
-	}
+      if (isset($shippingInformation->additionalData) && is_array($shippingInformation->additionalData)) {
+        foreach ($shippingInformation->additionalData as $additionalData) {
+          try {
+            $shipmentNumber = $additionalData['shipmentNumber'];
 
-	/**
-	 * Returns the parcel service preset for the given Id.
-	 *
-	 * @param int $parcelServicePresetId
-	 * @return ParcelServicePreset
-	 */
-	private function getParcelServicePreset($parcelServicePresetId)
-	{
-		/** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
-		$parcelServicePresetRepository = pluginApp(ParcelServicePresetRepositoryContract::class);
+            // use the shipping service provider's API here
+            $response = '';
 
-		$parcelServicePreset = $parcelServicePresetRepository->getPresetById($parcelServicePresetId);
+            $this->createOrderResult[$orderId] = $this->buildResultArray(true, $this->getStatusMessage($response), false, null);
+          } catch (\SoapFault $soapFault) {
+            // exception handling
+          }
+        }
 
-		if($parcelServicePreset)
-		{
-			return $parcelServicePreset;
-		}
-		else
-		{
-			return null;
-		}
-	}
+        // resets the shipping information of current order
+        $this->shippingInformationRepositoryContract->resetShippingInformation($orderId);
+      }
+    }
 
-	/**
-     * Returns a formatted status message
-     *
-	 * @param array $response
-	 * @return string
-	 */
-	private function getStatusMessage($response)
-	{
-		return 'Code: '.$response['status']; // should contain error code and descriptive part
-	}
+    // return result array
+    return $this->createOrderResult;
+  }
 
-    /**
-     * Saves the shipping information
-     *
-     * @param $orderId
-     * @param $shipmentDate
-     * @param $shipmentItems
-     */
-	private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems)
-	{
-		$transactionIds = array();
-		foreach ($shipmentItems as $shipmentItem)
-		{
-			$transactionIds[] = $shipmentItem['shipmentNumber'];
+  /**
+   * Retrieves the label file from a given URL and saves it in S3 storage
+   *
+   * @param
+   *            $labelUrl
+   * @param
+   *            $key
+   *
+   * @return StorageObject
+   */
+  private function saveLabelToS3($labelUrl, $key) {
+    $output = $this->download($labelUrl);
+    $this->getLogger(__FUNCTION__)->error(
+        'save to S3 data: ', [
+                               'data'     => base64_encode($output),
+                               'key'      => $key,
+                               'labelUrl' => $labelUrl
+                           ]
+    );
 
-		}
+    return $this->storageRepository->uploadObject('ShippingTutorial', $key, $output);
+  }
 
-        $shipmentAt = date(\DateTime::W3C, strtotime($shipmentDate));
-        $registrationAt = date(\DateTime::W3C);
+  /**
+   * Returns the parcel service preset for the given Id.
+   *
+   * @param int $parcelServicePresetId
+   *
+   * @return ParcelServicePreset
+   */
+  private function getParcelServicePreset($parcelServicePresetId) {
+    /** @var ParcelServicePresetRepositoryContract $parcelServicePresetRepository */
+    $parcelServicePresetRepository = pluginApp(ParcelServicePresetRepositoryContract::class);
 
-		$data = [
-			'orderId' => $orderId,
-			'transactionId' => implode(',', $transactionIds),
-			'shippingServiceProvider' => 'ShippingTutorial',
-			'shippingStatus' => 'registered',
-			'shippingCosts' => 0.00,
-			'additionalData' => $shipmentItems,
-			'registrationAt' => $registrationAt,
-			'shipmentAt' => $shipmentAt
+    $parcelServicePreset = $parcelServicePresetRepository->getPresetById($parcelServicePresetId);
 
-		];
-		$this->shippingInformationRepositoryContract->saveShippingInformation(
-			$data);
-	}
+    if ($parcelServicePreset) {
+      return $parcelServicePreset;
+    } else {
+      return null;
+    }
+  }
 
-    /**
-     * Returns all order ids with shipping status 'open'
-     *
-     * @param array $orderIds
-     * @return array
-     */
-	private function getOpenOrderIds($orderIds)
-	{
+  /**
+   * Returns a formatted status message
+   *
+   * @param array $response
+   *
+   * @return string
+   */
+  private function getStatusMessage($response) {
+    return 'Code: ' . $response['status']; // should contain error code and descriptive part
+  }
 
-		$openOrderIds = array();
-		foreach ($orderIds as $orderId)
-		{
-			$shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
-			if ($shippingInformation->shippingStatus == null || $shippingInformation->shippingStatus == 'open')
-			{
-				$openOrderIds[] = $orderId;
-			}
-		}
-		return $openOrderIds;
-	}
+  /**
+   * Saves the shipping information
+   *
+   * @param
+   *            $orderId
+   * @param
+   *            $shipmentDate
+   * @param
+   *            $shipmentItems
+   */
+  private function saveShippingInformation($orderId, $shipmentDate, $shipmentItems) {
+    $transactionIds = array();
+    foreach ($shipmentItems as $shipmentItem) {
+      $transactionIds[] = $shipmentItem['shipmentNumber'];
+    }
 
+    $shipmentAt     = date(\DateTime::W3C, strtotime($shipmentDate));
+    $registrationAt = date(\DateTime::W3C);
 
-	/**
-     * Returns an array in the structure demanded by plenty service
-     *
-	 * @param bool $success
-	 * @param string $statusMessage
-	 * @param bool $newShippingPackage
-	 * @param array $shipmentItems
-	 * @return array
-	 */
-	private function buildResultArray($success = false, $statusMessage = '', $newShippingPackage = false, $shipmentItems = [])
-	{
-		return [
-			'success' => $success,
-			'message' => $statusMessage,
-			'newPackagenumber' => $newShippingPackage,
-			'packages' => $shipmentItems,
-		];
-	}
+    $data = [
+        'orderId'                 => $orderId,
+        'transactionId'           => implode(',', $transactionIds),
+        'shippingServiceProvider' => 'ShippingTutorial',
+        'shippingStatus'          => 'registered',
+        'shippingCosts'           => 0.00,
+        'additionalData'          => $shipmentItems,
+        'registrationAt'          => $registrationAt,
+        'shipmentAt'              => $shipmentAt
+    ];
+    $this->shippingInformationRepositoryContract->saveShippingInformation($data);
+  }
 
-	/**
-     * Returns shipment array
-     *
-	 * @param string $labelUrl
-	 * @param string $shipmentNumber
-	 * @return array
-	 */
-	private function buildShipmentItems($labelUrl, $shipmentNumber)
-	{
-		return  [
-			'labelUrl' => $labelUrl,
-			'shipmentNumber' => $shipmentNumber,
-		];
-	}
+  /**
+   * Returns all order ids with shipping status 'open'
+   *
+   * @param array $orderIds
+   *
+   * @return array
+   */
+  private function getOpenOrderIds($orderIds) {
+    $openOrderIds = array();
+    foreach ($orderIds as $orderId) {
+      $shippingInformation = $this->shippingInformationRepositoryContract->getShippingInformationByOrderId($orderId);
+      if ($shippingInformation->shippingStatus == null || $shippingInformation->shippingStatus == 'open') {
+        $openOrderIds[] = $orderId;
+      }
+    }
 
-	/**
-     * Returns package info
-     *
-	 * @param string $packageNumber
-	 * @param string $labelUrl
-	 * @return array
-	 */
-	private function buildPackageInfo($packageNumber, $labelUrl)
-	{
-		return [
-			'packageNumber' => $packageNumber,
-			'label' => $labelUrl
-		];
-	}
+    return $openOrderIds;
+  }
 
-	/**
-     * Returns all order ids from request object
-     *
-	 * @param Request $request
-	 * @param $orderIds
-	 * @return array
-	 */
-	private function getOrderIds(Request $request, $orderIds)
-	{
-		if (is_numeric($orderIds))
-		{
-			$orderIds = array($orderIds);
-		}
-		else if (!is_array($orderIds))
-		{
-			$orderIds = $request->get('orderIds');
-		}
-		return $orderIds;
-	}
+  /**
+   * Returns an array in the structure demanded by plenty service
+   *
+   * @param bool   $success
+   * @param string $statusMessage
+   * @param bool   $newShippingPackage
+   * @param array  $shipmentItems
+   *
+   * @return array
+   */
+  private function buildResultArray($success = false, $statusMessage = '', $newShippingPackage = false, $shipmentItems = []) {
+    return [
+        'success'          => $success,
+        'message'          => $statusMessage,
+        'newPackagenumber' => $newShippingPackage,
+        'packages'         => $shipmentItems
+    ];
+  }
 
-	/**
-     * Returns the package dimensions by package type
-     *
-	 * @param $packageType
-	 * @return array
-	 */
-	private function getPackageDimensions($packageType): array
-	{
-		if ($packageType->length > 0 && $packageType->width > 0 && $packageType->height > 0)
-		{
-			$length = $packageType->length;
-			$width = $packageType->width;
-			$height = $packageType->height;
-		}
-		else
-		{
-			$length = null;
-			$width = null;
-			$height = null;
-		}
-		return array($length, $width, $height);
-	}
+  /**
+   * Returns shipment array
+   *
+   * @param string $labelUrl
+   * @param string $shipmentNumber
+   *
+   * @return array
+   */
+  private function buildShipmentItems($labelUrl, $shipmentNumber) {
+    return [
+        'labelUrl'       => $labelUrl,
+        'shipmentNumber' => $shipmentNumber
+    ];
+  }
 
+  /**
+   * Returns package info
+   *
+   * @param string $packageNumber
+   * @param string $labelUrl
+   *
+   * @return array
+   */
+  private function buildPackageInfo($packageNumber, $labelUrl) {
+    return [
+        'packageNumber' => $packageNumber,
+        'label'         => $labelUrl
+    ];
+  }
 
-	/**
-     * Handling of response values, fires S3 storage and updates order shipping package
-     *
-	 * @param string $labelUrl
-     * @param string $shipmentNumber
-     * @param string $sequenceNumber
-	 * @return array
-	 */
-	private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber)
-	{
-		$shipmentItems = array();
+  /**
+   * Returns all order ids from request object
+   *
+   * @param Request $request
+   * @param
+   *            $orderIds
+   *
+   * @return array
+   */
+  private function getOrderIds(Request $request, $orderIds) {
+    if (is_numeric($orderIds)) {
+      $orderIds = array(
+          $orderIds
+      );
+    } else if (!is_array($orderIds)) {
+      $orderIds = $request->get('orderIds');
+    }
 
-		$storageObject = $this->saveLabelToS3(
-			$labelUrl,
-			$shipmentNumber . '.pdf');
-		$this->getLogger(__FUNCTION__)
-			->error('storage data: ', ['storage' => $storageObject]);
-		$shipmentItems[] = $this->buildShipmentItems(
-			$labelUrl,
-			$shipmentNumber);
+    return $orderIds;
+  }
 
-		$this->orderShippingPackage->updateOrderShippingPackage(
-			$sequenceNumber,
-			$this->buildPackageInfo(
-				$shipmentNumber,
-				$storageObject->key));
-		return $shipmentItems;
-	}
+  /**
+   * Returns the package dimensions by package type
+   *
+   * @param
+   *            $packageType
+   *
+   * @return array
+   */
+  private function getPackageDimensions($packageType): array {
+    if ($packageType->length > 0 && $packageType->width > 0 && $packageType->height > 0) {
+      $length = $packageType->length;
+      $width  = $packageType->width;
+      $height = $packageType->height;
+    } else {
+      $length = null;
+      $width  = null;
+      $height = null;
+    }
 
-	/**
+    return array(
+        $length,
+        $width,
+        $height
+    );
+  }
+
+  /**
+   * Handling of response values, fires S3 storage and updates order shipping package
+   *
+   * @param string $labelUrl
+   * @param string $shipmentNumber
+   * @param string $sequenceNumber
+   *
+   * @return array
+   */
+  private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber) {
+    $shipmentItems = array();
+
+    $storageObject = $this->saveLabelToS3($labelUrl, $shipmentNumber . '.pdf');
+    $this->getLogger(__FUNCTION__)->error(
+        'storage data: ', [
+                            'storage' => $storageObject
+                        ]
+    );
+    $shipmentItems[] = $this->buildShipmentItems($labelUrl, $shipmentNumber);
+
+    $this->orderShippingPackage->updateOrderShippingPackage($sequenceNumber, $this->buildPackageInfo($shipmentNumber, $storageObject->key));
+
+    return $shipmentItems;
+  }
+
+  /**
+   *
    * @param string $fileUrl
    *
    * @return bool|string

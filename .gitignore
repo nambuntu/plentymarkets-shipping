@@ -7,3 +7,9 @@ npm-debug.log
 .idea/vcs.xml
 .idea/workspace.xml
 ShippingTutorial.iml
+/vendor/
+.buildpath
+.project
+.idea/*
+.settings
+
