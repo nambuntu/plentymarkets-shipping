@@ -27,6 +27,7 @@ class ShippingTutorialServiceProvider extends ServiceProvider {
         ['de' => 'ShippingTutorial', 'en' => 'ShippingTutorial'],
         [
             'ShippingTutorial\\Controllers\\ShippingController@registerShipments',
+            'ShippingTutorial\\Controllers\\ShippingController@getLabels',
             'ShippingTutorial\\Controllers\\ShippingController@deleteShipments',
         ]
     );

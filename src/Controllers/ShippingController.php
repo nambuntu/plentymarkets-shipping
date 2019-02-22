@@ -177,7 +177,7 @@ class ShippingController extends Controller {
           // shipping service providers API should be used here
           $response = [
               'labelUrl'       => 'http://www.dhl.com/content/dam/downloads/g0/express/customs_regulations_china/waybill_sample.pdf',
-              'shipmentNumber' => (string) rand(1000000, 9999999),
+              'shipmentNumber' => (string)rand(1000000, 9999999),
               'sequenceNumber' => 1,
               'status'         => 'shipment sucessfully registered'
           ];
@@ -198,6 +198,27 @@ class ShippingController extends Controller {
 
     // return all results to service
     return $this->createOrderResult;
+  }
+
+  public function getLabels(Request $request, $orderIds) {
+    $orderIds = $this->getOrderIds($request, $orderIds);
+    $labels   = array();
+    foreach ($orderIds as $orderId) {
+      $results = $this->orderShippingPackage->listOrderShippingPackages($orderId);
+      /* @var OrderShippingPackage $result */
+      foreach ($results as $result) {
+        $labelKey = explode('/', $result->labelPath)[1];
+        if ($this->storageRepository->doesObjectExist(IntersoftCoreHelper::PLUGIN_NAME, $labelKey)) {
+          $storageObject = $this->storageRepository->getObject(
+              IntersoftCoreHelper::PLUGIN_NAME,
+              $labelKey
+          );
+          $labels[]      = $storageObject->body;
+        }
+      }
+    }
+
+    return $labels;
   }
 
   /**
