@@ -177,7 +177,7 @@ class ShippingController extends Controller {
           // shipping service providers API should be used here
           $response = [
               'labelUrl'       => 'http://www.dhl.com/content/dam/downloads/g0/express/customs_regulations_china/waybill_sample.pdf',
-              'shipmentNumber' => '911778899',
+              'shipmentNumber' => (string) rand(1000000, 9999999),
               'sequenceNumber' => 1,
               'status'         => 'shipment sucessfully registered'
           ];
