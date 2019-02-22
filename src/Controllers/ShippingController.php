@@ -460,12 +460,16 @@ class ShippingController extends Controller {
    * @return bool|string
    */
   private function download(string $fileUrl) {
+    $this->getLogger(__METHOD__)
+        ->error('call to download', ['url' => $fileUrl]);
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $fileUrl);
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 10);
     $output = curl_exec($ch);
+    $this->getLogger(__METHOD__)
+        ->error('download finished', ['downloaded' => base64_encode($output)]);
     curl_close($ch);
 
     return $output;
