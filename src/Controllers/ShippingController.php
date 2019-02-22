@@ -270,19 +270,17 @@ class ShippingController extends Controller {
    * @return StorageObject
    */
   private function saveLabelToS3($labelUrl, $key) {
-    $output =
-        self::FILE_BASE64_DATA;
-    //$output = $this->download($labelUrl);
+    $output = $this->download($labelUrl);
 
     $this->getLogger(__METHOD__)->error(
         'save to S3 data: ', [
-                               'data'     => 'sample data',
+                               'data'     => base64_encode($output),
                                'key'      => $key,
                                'labelUrl' => $labelUrl
                            ]
     );
 
-    return $this->storageRepository->uploadObject(self::PLUGIN_NAME, $key, base64_decode($output));
+    return $this->storageRepository->uploadObject(self::PLUGIN_NAME, $key, $output);
   }
 
   /**
