@@ -95,6 +95,7 @@ class ShippingController extends Controller {
    * @param ShippingInformationRepositoryContract  $shippingInformationRepositoryContract
    * @param ShippingPackageTypeRepositoryContract  $shippingPackageTypeRepositoryContract
    * @param ConfigRepository                       $config
+   * @param LibraryCallContract                    $libraryCallContract
    */
   public function __construct(
       Request $request, OrderRepositoryContract $orderRepository, AddressRepositoryContract $addressRepositoryContract, OrderShippingPackageRepositoryContract $orderShippingPackage,
@@ -479,16 +480,18 @@ class ShippingController extends Controller {
     $key           = $shipmentNumber . '.pdf';
     $storageObject = $this->saveLabelToS3($labelUrl, $key);
 
+    $objectUrl = $this->storageRepository->getObjectUrl(self::PLUGIN_NAME, $key);
     $this->getLogger(__FUNCTION__)->error(
         'storage data: ', [
                             'storageObject' => $storageObject,
                             'url'           => $labelUrl,
-                            'fileUrl'       => $this->storageRepository->getObjectUrl(self::PLUGIN_NAME, $key)
+                            'fileUrl'       => $objectUrl
                         ]
     );
-    $shipmentItems[] = $this->buildShipmentItems($labelUrl, $shipmentNumber);
+    $url             = $objectUrl;
+    $shipmentItems[] = $this->buildShipmentItems($url, $shipmentNumber);
 
-    $this->orderShippingPackage->updateOrderShippingPackage($sequenceNumber, $this->buildPackageInfo($shipmentNumber, $labelUrl));
+    $this->orderShippingPackage->updateOrderShippingPackage($sequenceNumber, $this->buildPackageInfo($shipmentNumber, $storageObject->key));
 
     return $shipmentItems;
   }
