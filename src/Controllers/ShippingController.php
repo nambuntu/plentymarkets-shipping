@@ -476,11 +476,14 @@ class ShippingController extends Controller {
   private function handleAfterRegisterShipment($labelUrl, $shipmentNumber, $sequenceNumber) {
     $shipmentItems = array();
 
-    $storageObject = $this->saveLabelToS3($labelUrl, $shipmentNumber . '.pdf');
+    $key           = $shipmentNumber . '.pdf';
+    $storageObject = $this->saveLabelToS3($labelUrl, $key);
 
     $this->getLogger(__FUNCTION__)->error(
         'storage data: ', [
-                            'storage' => $storageObject
+                            'storageObject' => $storageObject,
+                            'url'           => $labelUrl,
+                            'fileUrl'       => $this->storageRepository->getObjectUrl(self::PLUGIN_NAME, $key)
                         ]
     );
     $shipmentItems[] = $this->buildShipmentItems($labelUrl, $shipmentNumber);
