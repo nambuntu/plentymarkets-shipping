@@ -239,7 +239,7 @@ class ShippingController extends Controller {
    */
   private function saveLabelToS3($labelUrl, $key) {
     $output = $this->download($labelUrl);
-    $this->getLogger(__FUNCTION__)->error(
+    $this->getLogger(__METHOD__)->error(
         'save to S3 data: ', [
                                'data'     => base64_encode($output),
                                'key'      => $key,
