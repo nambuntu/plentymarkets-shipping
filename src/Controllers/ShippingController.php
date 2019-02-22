@@ -11,6 +11,7 @@ use Plenty\Modules\Order\Shipping\Information\Contracts\ShippingInformationRepos
 use Plenty\Modules\Order\Shipping\Package\Contracts\OrderShippingPackageRepositoryContract;
 use Plenty\Modules\Order\Shipping\PackageType\Contracts\ShippingPackageTypeRepositoryContract;
 use Plenty\Modules\Order\Shipping\ParcelService\Models\ParcelServicePreset;
+use Plenty\Modules\Plugin\Libs\Contracts\LibraryCallContract;
 use Plenty\Modules\Plugin\Storage\Contracts\StorageRepositoryContract;
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Request;
@@ -23,6 +24,10 @@ use Plenty\Plugin\Log\Loggable;
 class ShippingController extends Controller {
   use Loggable;
 
+  /**
+   * @var LibraryCallContract
+   */
+  public $library;
   /**
    *
    * @var Request
@@ -92,7 +97,9 @@ class ShippingController extends Controller {
   public function __construct(
       Request $request, OrderRepositoryContract $orderRepository, AddressRepositoryContract $addressRepositoryContract, OrderShippingPackageRepositoryContract $orderShippingPackage,
       StorageRepositoryContract $storageRepository, ShippingInformationRepositoryContract $shippingInformationRepositoryContract,
-      ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract, ConfigRepository $config
+      ShippingPackageTypeRepositoryContract $shippingPackageTypeRepositoryContract, ConfigRepository $config,
+      LibraryCallContract $libraryCallContract
+
   ) {
     $this->request              = $request;
     $this->orderRepository      = $orderRepository;
@@ -103,7 +110,8 @@ class ShippingController extends Controller {
     $this->shippingInformationRepositoryContract = $shippingInformationRepositoryContract;
     $this->shippingPackageTypeRepositoryContract = $shippingPackageTypeRepositoryContract;
 
-    $this->config = $config;
+    $this->config  = $config;
+    $this->library = $libraryCallContract;
   }
 
   /**
@@ -462,16 +470,18 @@ class ShippingController extends Controller {
   private function download(string $fileUrl) {
     $this->getLogger(__METHOD__)
         ->error('call to download', ['url' => $fileUrl]);
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $fileUrl);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $output = curl_exec($ch);
-    $this->getLogger(__METHOD__)
-        ->error('download finished', ['downloaded' => base64_encode($output)]);
-    curl_close($ch);
 
-    return $output;
+    $response = $this->library->call(
+        'ShippingTutorial::guzzle',
+        [
+            'method'    => 'get',
+            'arguments' => [$fileUrl]
+        ]
+    );
+    
+    $this->getLogger(__METHOD__)
+        ->error('download finished', ['downloaded' => json_encode($response)]);
+
+    return $response['body'];
   }
 }
