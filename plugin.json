@@ -10,7 +10,9 @@
   "namespace": "ShippingTutorial",
   "author": "plentymarkets GmbH",
   "type": "shipping",
-  "categories": ["3521"],
+  "categories": [
+    "3521"
+  ],
   "isClosedSource": "False",
   "serviceProvider": "ShippingTutorial\\Providers\\ShippingTutorialServiceProvider",
   "version": "0.1.0",
@@ -32,5 +34,8 @@
   "dependencies": {
     "guzzlehttp/guzzle": "6.3.*",
     "psr/http-message": "1.0.*"
-  }
+  },
+  "runOnBuild": [
+    "ShippingTutorial\\Migrations\\CreateShippingServiceProvider"
+  ]
 }
